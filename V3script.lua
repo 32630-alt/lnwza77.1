@@ -1,141 +1,90 @@
-local Players = game:GetService("Players")
-local Market = game:GetService("MarketplaceService")
-local Player = Players.LocalPlayer
-local PlayerGui = Player:WaitForChild("PlayerGui")
+local Players, Market, UIS = game:GetService("Players"), game:GetService("MarketplaceService"), game:GetService("UserInputService")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+local CurrentSound, CurrentSoundID, LoggedIDs = nil, nil, {}
 
--- ล้างของเก่าและตั้งค่าเริ่มต้น
 if PlayerGui:FindFirstChild("Logger") then PlayerGui.Logger:Destroy() end
 
-local Gui = Instance.new("ScreenGui", PlayerGui)
-Gui.Name = "Logger"
-Gui.ResetOnSpawn = false
+local Gui = Instance.new("ScreenGui", PlayerGui); Gui.Name = "Logger"; Gui.ResetOnSpawn = false
 
--- ปุ่มเปิด/ปิด
-local Btn = Instance.new("TextButton", Gui)
-Btn.Size = UDim2.new(0, 60, 0, 60)
-Btn.Position = UDim2.new(0, 20, 0.5, -30)
-Btn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-Btn.Text = "สคริปดักlnwza77"
-Btn.Draggable = true
-
--- หน้าต่างหลัก
-local Main = Instance.new("Frame", Gui)
-Main.Size = UDim2.new(0, 320, 0, 400)
-Main.Position = UDim2.new(0.5, -160, 0.5, -200)
-Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-Main.Visible = false
-Main.Draggable = true
-
--- หัวข้อ
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "สคริปดักโดยitlnwza77"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.Font = Enum.Font.SourceSansBold
-Title.BackgroundTransparency = 1
-
--- แถบ Reset / Kill
-local TopBar = Instance.new("Frame", Main)
-TopBar.Size = UDim2.new(1, 0, 0, 40)
-TopBar.Position = UDim2.new(0, 0, 0, 30)
-TopBar.BackgroundTransparency = 1
-
-local ResetBtn = Instance.new("TextButton", TopBar)
-ResetBtn.Size = UDim2.new(0, 70, 0, 30)
-ResetBtn.Position = UDim2.new(0, 5, 0, 5)
-ResetBtn.Text = "Reset"
-
-local KillBtn = Instance.new("TextButton", TopBar)
-KillBtn.Size = UDim2.new(0, 70, 0, 30)
-KillBtn.Position = UDim2.new(1, -75, 0, 5)
-KillBtn.Text = "Kill"
-KillBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-
--- รายการเพลง
-local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, 0, 1, -70)
-Scroll.Position = UDim2.new(0, 0, 0, 70)
-Scroll.BackgroundTransparency = 1
-Scroll.ScrollBarThickness = 8
-local Layout = Instance.new("UIListLayout", Scroll)
-Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    Scroll.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 20)
-end)
-
-local loggedIDs = {}
-local currentSound = nil
-
--- ฟังก์ชันเพิ่มเพลง
-local function AddSound(sound)
-    if not sound:IsA("Sound") or sound.SoundId == "" then return end
-    local id = sound.SoundId:match("%d+")
-    if not id or loggedIDs[id] then return end
-    loggedIDs[id] = true
-    
-    local owner = "Map/System"
-    local char = sound:FindFirstAncestorWhichIsA("Model")
-    if char and Players:GetPlayerFromCharacter(char) then owner = char.Name end
-    
-    local btn = Instance.new("Frame", Scroll)
-    btn.Size = UDim2.new(1, -10, 0, 130)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    
-    local OwnerLabel = Instance.new("TextLabel", btn)
-    OwnerLabel.Size = UDim2.new(1, 0, 0.2, 0)
-    OwnerLabel.Text = "Owner: " .. owner
-    OwnerLabel.TextColor3 = Color3.fromRGB(0, 255, 255)
-    OwnerLabel.BackgroundTransparency = 1
-    
-    local NameLabel = Instance.new("TextLabel", btn)
-    NameLabel.Size = UDim2.new(1, 0, 0.2, 0)
-    NameLabel.Position = UDim2.new(0, 0, 0.2, 0)
-    NameLabel.Text = "Loading..."
-    NameLabel.TextColor3 = Color3.new(1, 1, 1)
-    NameLabel.BackgroundTransparency = 1
-    
-    task.spawn(function()
-        local s, i = pcall(function() return Market:GetProductInfo(id) end)
-        NameLabel.Text = (s and i) and i.Name or "Unknown"
-    end)
-    
-    local IDLabel = Instance.new("TextLabel", btn)
-    IDLabel.Size = UDim2.new(1, 0, 0.2, 0)
-    IDLabel.Position = UDim2.new(0, 0, 0.4, 0)
-    IDLabel.Text = id
-    IDLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    IDLabel.BackgroundTransparency = 1
-    
-    local Copy = Instance.new("TextButton", btn)
-    Copy.Size = UDim2.new(0.45, 0, 0.25, 0)
-    Copy.Position = UDim2.new(0.05, 0, 0.65, 0)
-    Copy.Text = "Copy ID"
-    Copy.MouseButton1Click:Connect(function() setclipboard(id) end)
-    
-    local Play = Instance.new("TextButton", btn)
-    Play.Size = UDim2.new(0.45, 0, 0.25, 0)
-    Play.Position = UDim2.new(0.5, 0, 0.65, 0)
-    Play.Text = "Play"
-    Play.MouseButton1Click:Connect(function()
-        if currentSound and currentSound.SoundId == ("rbxassetid://" .. id) then
-            currentSound:Stop() currentSound:Destroy() currentSound = nil
-            Play.Text = "Play"
-        else
-            if currentSound then currentSound:Stop() currentSound:Destroy() end
-            currentSound = Instance.new("Sound", workspace)
-            currentSound.SoundId = "rbxassetid://" .. id
-            currentSound:Play()
-            Play.Text = "Stop"
+-- ระบบลาก (เฉพาะ Object ที่กำหนด)
+local function MakeDraggable(obj)
+    local dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragStart = input.Position; startPos = obj.Position
         end
     end)
+    UIS.InputChanged:Connect(function(input)
+        if dragStart and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    obj.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragStart = nil end end)
 end
 
--- Events
-Btn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
-KillBtn.MouseButton1Click:Connect(function() Gui:Destroy() end)
-ResetBtn.MouseButton1Click:Connect(function() 
-    for _, c in pairs(Scroll:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end 
-    loggedIDs = {}
+-- UI หลัก
+local Main = Instance.new("Frame", Gui); Main.Size = UDim2.new(0, 280, 0, 350); Main.Position = UDim2.new(0.5, -140, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30); Main.BorderSizePixel = 0; Main.Visible = false
+MakeDraggable(Main) 
+
+local ToggleBtn = Instance.new("TextButton", Gui); ToggleBtn.Size = UDim2.new(0, 70, 0, 70); ToggleBtn.Position = UDim2.new(0, 10, 0.5, -25)
+ToggleBtn.Text = "สคริปดักเพลงitlnwza77"; ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+MakeDraggable(ToggleBtn)
+
+local Top = Instance.new("Frame", Main); Top.Size = UDim2.new(1, 0, 0, 30); Top.BackgroundTransparency = 1
+local ResetBtn = Instance.new("TextButton", Top); ResetBtn.Size = UDim2.new(0.5, 0, 1, 0); ResetBtn.Text = "Reset"
+local CloseBtn = Instance.new("TextButton", Top); CloseBtn.Size = UDim2.new(0.5, 0, 1, 0); CloseBtn.Position = UDim2.new(0.5, 0, 0, 0); CloseBtn.Text = "Close"; CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+
+-- ส่วนสำคัญ: ScrollingFrame
+local Scroll = Instance.new("ScrollingFrame", Main); Scroll.Size = UDim2.new(1, 0, 1, -30); Scroll.Position = UDim2.new(0, 0, 0, 30)
+Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 6
+local ListLayout = Instance.new("UIListLayout", Scroll)
+
+-- อัปเดตขนาด Canvas ให้พอดีกับจำนวนเพลงเสมอ
+ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y)
 end)
 
-game.DescendantAdded:Connect(function(d) if d:IsA("Sound") then AddSound(d) end end)
-for _, v in pairs(workspace:GetDescendants()) do if v:IsA("Sound") then AddSound(v) end end
+ToggleBtn.MouseButton1Click:Connect(function() Main.Visible = not Main.Visible end)
+CloseBtn.MouseButton1Click:Connect(function() Gui:Destroy() end)
+ResetBtn.MouseButton1Click:Connect(function() 
+    for _,c in pairs(Scroll:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+    LoggedIDs = {}; Scroll.CanvasPosition = Vector2.new(0, 0) 
+end)
+
+-- ฟังก์ชันสร้างช่องเพลง
+local function AddSound(id, name)
+    local btn = Instance.new("Frame", Scroll); btn.Size = UDim2.new(1, -10, 0, 90); btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    
+    local NameLabel = Instance.new("TextLabel", btn); NameLabel.Size = UDim2.new(1, -5, 0.25, 0); NameLabel.Position = UDim2.new(0, 5, 0, 0); NameLabel.Text = "Name: " .. name; NameLabel.TextColor3 = Color3.new(1,1,1); NameLabel.BackgroundTransparency = 1; NameLabel.TextScaled = true; NameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    local IDLabel = Instance.new("TextLabel", btn); IDLabel.Size = UDim2.new(1, -5, 0.25, 0); IDLabel.Position = UDim2.new(0, 5, 0.25, 0); IDLabel.Text = "ID: " .. id; IDLabel.TextColor3 = Color3.fromRGB(255, 255, 0); IDLabel.BackgroundTransparency = 1; IDLabel.TextScaled = true; IDLabel.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local PlayBtn = Instance.new("TextButton", btn); PlayBtn.Size = UDim2.new(0.5, 0, 0.4, 0); PlayBtn.Position = UDim2.new(0, 0, 0.6, 0); PlayBtn.Text = "Play"; PlayBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+    local Del = Instance.new("TextButton", btn); Del.Size = UDim2.new(0.5, 0, 0.4, 0); Del.Position = UDim2.new(0.5, 0, 0.6, 0); Del.Text = "Remove"; Del.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    
+    PlayBtn.MouseButton1Click:Connect(function()
+        if CurrentSound and CurrentSoundID == id then
+            CurrentSound:Stop(); CurrentSound:Destroy(); CurrentSound = nil; CurrentSoundID = nil
+            PlayBtn.Text = "Play"; PlayBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
+        else
+            if CurrentSound then CurrentSound:Stop(); CurrentSound:Destroy() end
+            CurrentSound = Instance.new("Sound", workspace); CurrentSound.SoundId = "rbxassetid://" .. id; CurrentSound:Play()
+            CurrentSoundID = id
+            PlayBtn.Text = "หยุด"; PlayBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
+        end
+    end)
+    Del.MouseButton1Click:Connect(function() LoggedIDs[id] = nil; btn:Destroy() end)
+end
+
+game.DescendantAdded:Connect(function(s)
+    if s:IsA("Sound") and s.SoundId ~= "" then
+        local id = s.SoundId:match("%d+")
+        if id and not LoggedIDs[id] then
+            LoggedIDs[id] = true
+            local name = "Unknown"
+            pcall(function() name = Market:GetProductInfo(id).Name end)
+            AddSound(id, name)
+        end
+    end
+end)
